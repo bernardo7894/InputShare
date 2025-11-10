@@ -20,6 +20,11 @@ __InputShare__ enables you to share the keyboard and mouse of your computer with
 - __Clipboard Sync__: Seamlessly sync clipboard content between your computer and Android device.
 - __Easy-to-Use GUI__
 
+> [!note]
+> Feels not convenient enough? Upgrade to **InputShare2** — a commercial edition with multi-device support, automatic device discovery, customizable key mappings, and a refreshed modern UI. Learn more:
+> 
+> <a href="https://apps.microsoft.com/detail/9nmwdkc9kp3t?referrer=appbadge&mode=direct"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/></a>
+
 ## Screenshots
 
 | Pairing | Connecting | Settings | System Tray |
