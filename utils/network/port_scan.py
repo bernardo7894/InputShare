@@ -4,6 +4,8 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from utils.logger import LOGGER, LogType
 
+import utils.network.port_finder_adb as pfa
+
 DEFAULT_START_PORT = 32000
 DEFAULT_END_PORT = 47000
 DEFAULT_STEP = 512
@@ -42,4 +44,7 @@ def scan_port(ip: str) -> list[int]:
         except Exception as e:
             LOGGER.write(LogType.Error, "Port scanning error: " + str(e))
     executor.shutdown(cancel_futures=True)
+
+    target_ports += [pfa.find_port_adb(ip)]
+    
     return target_ports
