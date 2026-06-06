@@ -4,7 +4,8 @@ import pynput
 
 from typing import Callable
 from server.reporter_receiver import DevicePosition
-from utils import VoidCallable, screen_size
+from ui.fullscreen_mask import capture_current_cursor_snapshot, hide_frozen_cursor, show_frozen_cursor
+from utils import VoidCallable, screen_size, selected_monitor
 from utils.config_manager import get_config
 from utils.logger import LOGGER, LogType
 
@@ -27,6 +28,15 @@ def call_edge_toggling_callbacks():
     for callback in edge_toggling_callbacks: callback()
 
 config = get_config()
+bind_cursor_to_overlay_monitor = config.bind_cursor_to_overlay_monitor
+overlay_monitor = selected_monitor(config.overlay_monitor_index)
+overlay_left = overlay_monitor.x
+overlay_right = overlay_monitor.x + overlay_monitor.width - 1
+overlay_top = overlay_monitor.y
+overlay_bottom = overlay_monitor.y + overlay_monitor.height - 1
+overlay_center_x = overlay_monitor.x + overlay_monitor.width // 2
+overlay_center_y = overlay_monitor.y + overlay_monitor.height // 2
+OVERLAY_RECENTER_MARGIN = 80
 
 is_edge_toggling_enabled = config.edge_toggling
 if is_edge_toggling_enabled:
@@ -46,6 +56,17 @@ def resume_edge_toggling():
 
 def create_edge_portal():
     from input.controller import schedule_toggle as main_schedule_toggle
+
+    def recenter_overlay_cursor_if_needed(x: int, y: int):
+        if not bind_cursor_to_overlay_monitor: return
+        is_near_edge = \
+            x <= overlay_left + OVERLAY_RECENTER_MARGIN or\
+            x >= overlay_right - OVERLAY_RECENTER_MARGIN or\
+            y <= overlay_top + OVERLAY_RECENTER_MARGIN or\
+            y >= overlay_bottom - OVERLAY_RECENTER_MARGIN
+        if not is_near_edge: return
+        edge_portal_passing_event.set()
+        mouse_controller.position = (overlay_center_x, overlay_center_y)
 
     def return_to_before_toggling():
         nonlocal cursor_pos_before_toggling
@@ -86,6 +107,10 @@ def create_edge_portal():
                 cursor_pos_before_toggling = temp_pos
                 main_schedule_toggle(True)
         else:
+            if bind_cursor_to_overlay_monitor:
+                recenter_overlay_cursor_if_needed(x, y)
+                time.sleep(EDGE_PORTAL_LOOP_INTERVAL_SEC)
+                continue
             if is_at_left_side or is_at_right_side or is_at_top_side or is_at_bottom_side:
                 edge_portal_passing_event.set()
             if is_at_left_side:
@@ -103,11 +128,26 @@ def create_edge_portal():
 def edge_portal_thread_factory() -> tuple[
     VoidCallable, VoidCallable, VoidCallable
 ]:
+    desktop_cursor_position: tuple[int, int] | None = None
+
     def start_edge_portal():
+        nonlocal desktop_cursor_position
+        if bind_cursor_to_overlay_monitor:
+            desktop_cursor_position = mouse_controller.position
+            show_frozen_cursor(desktop_cursor_position, capture_current_cursor_snapshot(), wait=True)
+            edge_portal_passing_event.set()
+            mouse_controller.position = (overlay_center_x, overlay_center_y)
         pause_event.clear()
     def pause_edge_portal():
+        nonlocal desktop_cursor_position
         pause_event.set()
+        if bind_cursor_to_overlay_monitor and desktop_cursor_position is not None:
+            edge_portal_passing_event.set()
+            mouse_controller.position = desktop_cursor_position
+            desktop_cursor_position = None
+            hide_frozen_cursor()
     def close_edge_portal():
+        pause_edge_portal()
         close_event.set()
 
     pause_event.set()

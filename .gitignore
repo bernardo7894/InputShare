@@ -2,9 +2,11 @@
 
 /build
 /dist
+android_keepawake_helper/build/
 
 __pycache__/
 
 *.spec
 *.log
 *.json
+*.idsig

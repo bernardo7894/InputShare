@@ -16,6 +16,9 @@ __adb_device_list: list[adbutils.AdbDevice] = []
 os.environ["ADBUTILS_ADB_PATH"] = str(adb_bin_path)
 ADB_BIN_PATH = str(adb_bin_path)
 ADB_SERVER_PORT = 5038
+KEEP_AWAKE_PACKAGE_NAME = "com.inputshare.keepawake"
+KEEP_AWAKE_SERVICE_NAME = f"{KEEP_AWAKE_PACKAGE_NAME}/.KeepAwakeService"
+KEEP_AWAKE_APK_PATH = Path.joinpath(script_path, "server/InputShareKeepAwake.apk")
 
 class ADBWiredConnectionError(Exception): pass
 
@@ -35,6 +38,15 @@ def get_adb_device(device_index: int = 0) -> adbutils.AdbDevice | Exception:
 
 def append_adb_device(device: adbutils.AdbDevice):
     __adb_device_list.append(device)
+
+def _run_adb_for_device(device: adbutils.AdbDevice, args: list[str], timeout: float = 5.0) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [ADB_BIN_PATH, "-P", str(ADB_SERVER_PORT), "-s", device.serial, *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=timeout,
+    )
 
 def start_adb_server():
     command = f"{ADB_BIN_PATH} -P {ADB_SERVER_PORT} start-server"
@@ -104,3 +116,52 @@ def get_display_size(adb_client: adbutils.AdbClient) -> tuple[int, int]:
     size = size_match.group(0).split('=')[1]
     width, height = map(int, size.split('x'))
     return (width, height)
+
+def install_keep_awake_helper(device: adbutils.AdbDevice) -> bool:
+    if not KEEP_AWAKE_APK_PATH.exists():
+        LOGGER.write(LogType.Error, f"Keep-awake helper APK not found: {KEEP_AWAKE_APK_PATH}")
+        return False
+
+    installed_path = device.shell(f"pm path {KEEP_AWAKE_PACKAGE_NAME}")
+    if isinstance(installed_path, str) and len(installed_path.strip()) > 0:
+        return True
+
+    LOGGER.write(LogType.Adb, "Installing InputShare keep-awake helper APK...")
+    process = _run_adb_for_device(device, ["install", "-r", str(KEEP_AWAKE_APK_PATH)], timeout=30.0)
+    if process.returncode != 0:
+        LOGGER.write(LogType.Error, "Keep-awake helper install failed: " + (process.stderr or process.stdout))
+        return False
+    LOGGER.write(LogType.Adb, "InputShare keep-awake helper APK installed.")
+    return True
+
+def start_keep_awake_helper() -> bool:
+    device = get_adb_device()
+    if isinstance(device, Exception): return False
+    if not install_keep_awake_helper(device): return False
+
+    # On normal Android this is equivalent to the user enabling "Display over other apps".
+    # Xiaomi may still require a manual confirmation, so failure here is non-fatal.
+    _run_adb_for_device(device, ["shell", "appops", "set", KEEP_AWAKE_PACKAGE_NAME, "SYSTEM_ALERT_WINDOW", "allow"])
+
+    process = _run_adb_for_device(
+        device,
+        ["shell", "am", "start-foreground-service", "-n", KEEP_AWAKE_SERVICE_NAME],
+    )
+    if process.returncode != 0:
+        process = _run_adb_for_device(device, ["shell", "am", "startservice", "-n", KEEP_AWAKE_SERVICE_NAME])
+    if process.returncode != 0:
+        LOGGER.write(LogType.Error, "Keep-awake helper start failed: " + (process.stderr or process.stdout))
+        return False
+    LOGGER.write(LogType.Adb, "InputShare keep-awake helper started.")
+    return True
+
+def stop_keep_awake_helper():
+    device = get_adb_device()
+    if isinstance(device, Exception): return
+    process = _run_adb_for_device(
+        device,
+        ["shell", "am", "startservice", "-n", KEEP_AWAKE_SERVICE_NAME, "--ez", "stop", "true"],
+    )
+    if process.returncode != 0:
+        _run_adb_for_device(device, ["shell", "am", "force-stop", KEEP_AWAKE_PACKAGE_NAME])
+    LOGGER.write(LogType.Adb, "InputShare keep-awake helper stopped.")

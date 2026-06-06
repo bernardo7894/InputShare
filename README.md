@@ -12,6 +12,19 @@
 
 __InputShare__ enables you to share the keyboard and mouse of your computer with an Android device via ADB in wired / wireless way.
 
+## About this fork
+
+This fork keeps the original InputShare workflow, but adds a few quality-of-life changes aimed at wireless debugging and multi-monitor desktop use:
+
+- Remembers the full wireless debugging address, including the port, so reconnecting does not lose addresses like `192.168.1.84:45678`.
+- Attempts to reconnect to the saved wireless device automatically on launch.
+- Lets you choose which monitor shows the fullscreen overlay.
+- Adds an option to keep the real desktop cursor contained on the overlay monitor while showing a frozen copy of your actual cursor at its original desktop position.
+- Improves terminal shutdown so `Ctrl+C` can cleanly stop the app.
+- Adds an optional Android keep-awake helper APK for devices where ADB wake/stay-awake commands are not enough. This was added after testing on a Xiaomi Poco F7 / HyperOS device.
+
+For the keep-awake helper, enable **Keep Screen On** in settings. InputShare will try to install/start `server/InputShareKeepAwake.apk` through ADB. Some Xiaomi/HyperOS devices block ADB installation; if that happens, install the APK manually and grant **Display over other apps** to `InputShare Keep Awake`.
+
 ## Features
 
 - __Seamless Switching__: Quickly switch keyboard and mouse input between the PC and Android device via hotkey and edge toggling.

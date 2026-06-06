@@ -4,6 +4,7 @@ import customtkinter as ctk
 
 from server.reporter_receiver import DevicePosition
 from ui import ICON_ICO_PATH
+from utils import monitor_labels
 from utils.config_manager import get_config
 from utils.i18n import get_i18n, ENGLISH_LANGUAGE, CHINESE_LANGUAGE
 
@@ -182,6 +183,42 @@ def mount_elements(root: ctk.CTk):
         check_box.grid(row=0, column=1)
         info_label.grid(row=1, column=0, columnspan=2, padx=20)
 
+    def overlay_monitor_section():
+        nonlocal settings_scroll_frame, smaller_font, normal_font, larger_font,\
+                 overlay_monitor_var, overlay_monitor_options,\
+                 bind_cursor_to_overlay_monitor_var
+        overlay_monitor_frame = ctk.CTkFrame(master=settings_scroll_frame)
+        overlay_monitor_label = ctk.CTkLabel(
+            master=overlay_monitor_frame,
+            font=larger_font,
+            text=i18n(["Overlay Monitor: ", "蒙版显示器："]))
+        option_menu = ctk.CTkOptionMenu(
+            master=overlay_monitor_frame,
+            font=normal_font,
+            variable=overlay_monitor_var,
+            values=overlay_monitor_options)
+        info_label = ctk.CTkLabel(
+            master=overlay_monitor_frame,
+            font=smaller_font,
+            text=i18n(["Choose where the fullscreen control overlay appears.",
+                       "选择全屏控制蒙版显示在哪个显示器上。"]))
+        bind_cursor_checkbox = ctk.CTkCheckBox(
+            master=overlay_monitor_frame,
+            font=normal_font,
+            variable=bind_cursor_to_overlay_monitor_var,
+            text=i18n(["Bind cursor to overlay monitor", "将鼠标限制在蒙版显示器上"]))
+        bind_cursor_info_label = ctk.CTkLabel(
+            master=overlay_monitor_frame,
+            font=smaller_font,
+            text=i18n(["When redirecting, keep the desktop cursor inside this monitor instead of wrapping edges.",
+                       "重定向时，将桌面鼠标限制在该显示器内，而不是从屏幕边缘环绕。"]))
+        overlay_monitor_frame.pack(fill="x", pady=(20, 0))
+        overlay_monitor_label.pack(fill="x", padx=20, anchor="w")
+        option_menu.pack(fill="x", padx=20, pady=4)
+        info_label.pack(fill="x", padx=20)
+        bind_cursor_checkbox.pack(fill="x", padx=20, pady=(8, 0))
+        bind_cursor_info_label.pack(fill="x", padx=20)
+
     def mount_language_section():
         nonlocal settings_scroll_frame, smaller_font, normal_font, larger_font, language_var
         language_frame = ctk.CTkFrame(master=settings_scroll_frame)
@@ -209,14 +246,18 @@ def mount_elements(root: ctk.CTk):
         root.destroy()
 
     def confirm():
-        nonlocal root, config, theme_var, speed_var, language_var
-        config.theme           = theme_var.get()
-        config.mouse_speed     = speed_var.get()
-        config.edge_toggling   = edge_toggling_var.get()
-        config.device_position = device_position_var.get()
-        config.trigger_margin  = int(trigger_margin_var.get())
-        config.keep_wakeup     = keep_wakeup_var.get()
-        config.language        = language_var.get()
+        nonlocal root, config, theme_var, speed_var, language_var,\
+                 overlay_monitor_var, overlay_monitor_options,\
+                 bind_cursor_to_overlay_monitor_var
+        config.theme                          = theme_var.get()
+        config.mouse_speed                    = speed_var.get()
+        config.edge_toggling                  = edge_toggling_var.get()
+        config.device_position                = device_position_var.get()
+        config.trigger_margin                 = int(trigger_margin_var.get())
+        config.overlay_monitor_index          = overlay_monitor_options.index(overlay_monitor_var.get())
+        config.bind_cursor_to_overlay_monitor = bind_cursor_to_overlay_monitor_var.get()
+        config.keep_wakeup                    = keep_wakeup_var.get()
+        config.language                       = language_var.get()
         root.destroy()
 
     i18n   = get_i18n()
@@ -227,17 +268,25 @@ def mount_elements(root: ctk.CTk):
 
     settings_scroll_frame = ctk.CTkScrollableFrame(master=root, height=320)
     settings_scroll_frame.pack(fill="x", expand=True)
+    overlay_monitor_options = monitor_labels()
+    if len(overlay_monitor_options) == 0:
+        overlay_monitor_options = [i18n(["Monitor 1", "显示器 1"])]
+    overlay_monitor_index = min(max(config.overlay_monitor_index, 0), len(overlay_monitor_options) - 1)
+
     theme_var           = ctk.StringVar (master=settings_scroll_frame, value=config.theme)
     speed_var           = ctk.DoubleVar (master=settings_scroll_frame, value=config.mouse_speed)
     edge_toggling_var   = ctk.BooleanVar(master=settings_scroll_frame, value=config.edge_toggling)
     device_position_var = ctk.StringVar (master=settings_scroll_frame, value=config.device_position)
     trigger_margin_var  = ctk.StringVar (master=settings_scroll_frame, value=str(config.trigger_margin))
+    overlay_monitor_var = ctk.StringVar (master=settings_scroll_frame, value=overlay_monitor_options[overlay_monitor_index])
+    bind_cursor_to_overlay_monitor_var = ctk.BooleanVar(master=settings_scroll_frame, value=config.bind_cursor_to_overlay_monitor)
     keep_wakeup_var     = ctk.BooleanVar(master=settings_scroll_frame, value=config.keep_wakeup)
     language_var        = ctk.StringVar (master=settings_scroll_frame, value=i18n([ENGLISH_LANGUAGE, CHINESE_LANGUAGE]))
 
     mouse_theme_section()
     mount_speed_section()
     edge_toggling_section()
+    overlay_monitor_section()
     keep_wakeup_section()
     mount_language_section()
 

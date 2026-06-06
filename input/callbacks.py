@@ -15,6 +15,7 @@ from scrcpy_client.inject_event import InjectKeyCode
 from scrcpy_client.sdl_def import SDL_Scancode
 from input.edge_portal import edge_portal_passing_event
 from utils.config_manager import get_config
+from utils.logger import LOGGER, LogType
 
 CallbackResult = Exception | None
 SendDataCallback = Callable[[bytes], CallbackResult]
@@ -73,8 +74,7 @@ def callback_context_wrapper(
 
     executor = ThreadPoolExecutor()
     def send_data(data: bytes) -> CallbackResult:
-        nonlocal client_socket, wakeup_counter
-        wakeup_counter = 0
+        nonlocal client_socket
         try: client_socket.sendall(data)
         except Exception as e: return e
         return None
@@ -141,25 +141,24 @@ def callback_context_wrapper(
     last_mouse_point: tuple[int, int] | None = None
     mouse_button_state = MouseButtonStateStore()
     movement_queue: queue.Queue[tuple[int, int]] = queue.Queue(maxsize=5)
-    wakeup_counter = 0
 
     def mouse_movement_sender():
-        nonlocal movement_queue, wakeup_counter
-
-        def send_wakeup_signal() -> CallbackResult:
-            key_down = InjectKeyCode(AKeyCode.AKEYCODE_WAKEUP, AKeyEventAction.AKEY_EVENT_ACTION_DOWN)
-            key_up   = InjectKeyCode(AKeyCode.AKEYCODE_WAKEUP, AKeyEventAction.AKEY_EVENT_ACTION_UP)
-            for key in [key_down, key_up]:
-                res = send_data(key.serialize())
-                if res is not None: return res
+        nonlocal movement_queue
 
         INTERVAL_SEC = 1 / 125 # the most common mouse polling rate
-        LOOP_FREQUENCY = int(1 / (INTERVAL_SEC * 2))
-        WAKEUP_INTERVAL_SEC = 5
-        WAKEUP_COUNT_MODULO = LOOP_FREQUENCY * WAKEUP_INTERVAL_SEC
+        WAKEUP_INTERVAL_SEC = 2
 
         no_move_timer = time.perf_counter() 
+        last_wakeup_time = time.perf_counter()
         while True:
+            current_time = time.perf_counter()
+            if get_config().keep_wakeup and not manual_device_sleep and\
+               current_time - last_wakeup_time > WAKEUP_INTERVAL_SEC:
+                last_wakeup_time = current_time
+                if (res := send_data(KeyEmptyEvent().serialize())) is not None:
+                    schedule_exit(res); break
+                LOGGER.write(LogType.Adb, "Android keep-awake HID pulse sent.")
+
             try:# adapt different polling rates.
                 # when mouse moves, the loop frequency equals polling rate;
                 # when no mouse movement, `movement_queue.get` throws error,
@@ -172,18 +171,7 @@ def callback_context_wrapper(
                 continue
             except: pass
 
-            # when there is no mouse movement for `WAKEUP_INTERVAL_SEC * 2` seconds
-            # and the `keep_wakeup` is True,
-            # send wakeup signal every `WAKEUP_INTERVAL_SEC` second.
-            current_time = time.perf_counter()
             if no_move_timer is None: no_move_timer = current_time 
-            if current_time - no_move_timer > WAKEUP_INTERVAL_SEC:
-                if not get_config().keep_wakeup: continue
-                wakeup_counter += 1
-                if wakeup_counter % WAKEUP_COUNT_MODULO or manual_device_sleep: continue
-                if (res := send_wakeup_signal()) is not None:
-                    schedule_exit(res); break
-                continue
             # when there is no mouse movement within `WAKEUP_INTERVAL_SEC * 2` seconds,
             # send zero movement mouse event.
             event = MouseMoveEvent(0, 0, mouse_button_state)

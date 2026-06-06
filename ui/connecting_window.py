@@ -156,6 +156,7 @@ def mount_connecting_view(tabview: ctk.CTkTabview) -> ctk.CTkEntry:
             enable_widgets()
         elif type(result) == ProcessOk:
             get_config().scan_port = bool(auto_scan_port.get())
+            get_config().device_addr1 = result.ip_port_str
             get_config().device_ip1 = get_ip_from_ip_port(result.ip_port_str)
             connecting_window.destroy()
         else: unreachable("Connection result: " + str(result))
@@ -210,7 +211,7 @@ def mount_connecting_view(tabview: ctk.CTkTabview) -> ctk.CTkEntry:
         text=i18n(["Auto detect port", "自动检测端口"]))
     waiting_label = ctk.CTkLabel(master=frame, text="", font=normal_font)
 
-    addr_entry.insert(0, get_config().device_ip1)
+    addr_entry.insert(0, get_config().device_addr1 or get_config().device_ip1)
     if get_config().scan_port: auto_scan_port.select()
 
     prompt_label.grid(row=0, column=0, padx=20, pady=(10, 4), sticky="w")

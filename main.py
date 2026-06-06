@@ -8,11 +8,20 @@ from server import deploy_reporter_server, deploy_scrcpy_server, scrcpy_receiver
 from input.callbacks import callback_context_wrapper
 from ui.connecting_window import open_connecting_window
 from ui.tray import tray_thread_factory
-from utils.adb_controller import ADBWiredConnectionError, append_adb_device, get_adb_client, start_adb_server
+from utils.adb_controller import (
+    ADBWiredConnectionError,
+    append_adb_device,
+    get_adb_client,
+    start_adb_server,
+    start_keep_awake_helper,
+    stop_keep_awake_helper,
+    try_connect_device,
+)
 from utils.config_manager import get_config
 from utils.i18n import get_i18n
 from utils.logger import LogType, LOGGER
 from utils.notification import Notification, send_notification
+from utils.network import get_ip_from_ip_port, is_valid_ip, is_valid_ip_port, scan_port
 
 def close_notification_resolver(errno: Exception | None):
     close_notification = None
@@ -49,45 +58,78 @@ def close_notification_resolver(errno: Exception | None):
     LOGGER.write(LogType.Info, "Program terminated with: " + str(close_notification))
     send_notification(close_notification)
 
+def try_connect_saved_device() -> bool:
+    config = get_config()
+    saved_addr = (config.device_addr1 or config.device_ip1).strip()
+    if len(saved_addr) == 0: return False
+
+    if is_valid_ip_port(saved_addr):
+        return try_connect_device(saved_addr) is not None
+
+    if not config.scan_port or not is_valid_ip(saved_addr):
+        return False
+
+    for port in scan_port(saved_addr):
+        connect_addr = f"{saved_addr}:{port}"
+        if try_connect_device(connect_addr) is not None:
+            config.device_addr1 = connect_addr
+            config.device_ip1 = get_ip_from_ip_port(connect_addr)
+            return True
+    return False
+
 if __name__ == "__main__":
     freeze_support()
 
-    start_adb_server()
-    is_wired_connection = open_connecting_window()
-    if is_wired_connection:
-        device_list = get_adb_client().device_list()
-        if len(device_list) == 0:
-            # selected wired connection
-            close_notification_resolver(ADBWiredConnectionError())
-            sys.exit(1)
-        append_adb_device(device_list[0])
-
-    res = deploy_scrcpy_server()
-    if isinstance(res, Exception):
-        close_notification_resolver(res)
-        sys.exit(1)
-    scrcpy_server_process, scrcpy_client_socket = res
-
-    stop_scrcpy_receiver = scrcpy_receiver.server_receiver_factory(scrcpy_client_socket)
+    scrcpy_server_process = None
+    stop_scrcpy_receiver: Callable | None = None
     stop_reporter_receiver: Callable | None = None
+    close_tray: Callable | None = None
+    main_errno: Exception | None = None
+    keep_awake_helper_started = False
 
-    if get_config().edge_toggling:
-        res = deploy_reporter_server()
+    try:
+        start_adb_server()
+        if not try_connect_saved_device():
+            is_wired_connection = open_connecting_window()
+            if is_wired_connection:
+                device_list = get_adb_client().device_list()
+                if len(device_list) == 0:
+                    # selected wired connection
+                    main_errno = ADBWiredConnectionError()
+                    sys.exit(1)
+                append_adb_device(device_list[0])
+
+        res = deploy_scrcpy_server()
         if isinstance(res, Exception):
-            close_notification_resolver(res)
+            main_errno = res
             sys.exit(1)
-        stop_reporter_receiver = reporter_receiver.server_receiver_factory()
+        scrcpy_server_process, scrcpy_client_socket = res
 
-    close_tray = tray_thread_factory(scrcpy_client_socket)
-    callbacks  = callback_context_wrapper(scrcpy_client_socket)
+        stop_scrcpy_receiver = scrcpy_receiver.server_receiver_factory(scrcpy_client_socket)
 
-    from input.controller import main_loop
-    main_errno = main_loop(*callbacks)
+        if get_config().edge_toggling:
+            res = deploy_reporter_server()
+            if isinstance(res, Exception):
+                main_errno = res
+                sys.exit(1)
+            stop_reporter_receiver = reporter_receiver.server_receiver_factory()
 
-    LOGGER.write(LogType.Info, "Terminated, closing...")
-    stop_scrcpy_receiver()
-    stop_reporter_receiver and stop_reporter_receiver() # type: ignore
-    scrcpy_server_process.terminate()
+        if get_config().keep_wakeup:
+            keep_awake_helper_started = start_keep_awake_helper()
 
-    close_notification_resolver(main_errno)
-    close_tray()
+        close_tray = tray_thread_factory(scrcpy_client_socket)
+        callbacks  = callback_context_wrapper(scrcpy_client_socket)
+
+        from input.controller import main_loop
+        main_errno = main_loop(*callbacks)
+    except KeyboardInterrupt:
+        LOGGER.write(LogType.Info, "Interrupted from terminal.")
+    finally:
+        LOGGER.write(LogType.Info, "Terminated, closing...")
+        if keep_awake_helper_started:
+            stop_keep_awake_helper()
+        stop_scrcpy_receiver and stop_scrcpy_receiver()
+        stop_reporter_receiver and stop_reporter_receiver()
+        scrcpy_server_process and scrcpy_server_process.terminate()
+        close_notification_resolver(main_errno)
+        close_tray and close_tray()

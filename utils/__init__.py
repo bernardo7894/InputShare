@@ -11,8 +11,24 @@ def clamp(v: int, x: int, y: int) -> int:
     return min(max(v, x), y)
 
 def screen_size() -> tuple[int, int]:
-    monitor = screeninfo.get_monitors()[0]
+    monitor = selected_monitor(0)
     return monitor.width, monitor.height
+
+def selected_monitor(index: int):
+    monitors = screeninfo.get_monitors()
+    if len(monitors) == 0:
+        raise RuntimeError("No monitor detected.")
+    return monitors[clamp(index, 0, len(monitors) - 1)]
+
+def monitor_labels() -> list[str]:
+    labels = []
+    for index, monitor in enumerate(screeninfo.get_monitors()):
+        primary_mark = " primary" if getattr(monitor, "is_primary", False) else ""
+        labels.append(
+            f"Monitor {index + 1}{primary_mark}: "
+            f"{monitor.width}x{monitor.height} at {monitor.x},{monitor.y}"
+        )
+    return labels
 
 def script_abs_path(_file: str) -> Path:
     return Path(_file).resolve().parent

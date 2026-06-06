@@ -133,22 +133,31 @@ def main_loop(
         on_scroll=mouse_scroll_handler_factory(mouse_scroll_callback),
     )
     mouse_listener.start()
-    while not exit_event.is_set() and main_errno is None:
-        if (res := after_toggle(is_redirecting)) is not None:
-            main_errno = res; break
+    try:
+        while not exit_event.is_set() and main_errno is None:
+            if (res := after_toggle(is_redirecting)) is not None:
+                main_errno = res; break
 
-        keyboard_listener = keyboard.Listener(
-            suppress=is_redirecting,
-            on_press=keyboard_press_handler_factory(keyboard_press_callback),
-            on_release=keyboard_release_handler_factory(keyboard_release_callback),
-        )
-        keyboard_listener.start()
-        toggle_event.wait()
-        toggle_event.clear()
-        before_toggle(is_redirecting)
-        keyboard_listener.stop()
-
-    mouse_listener.stop()
-    exit_mask()
-    close_edge_portal()
+            keyboard_listener = keyboard.Listener(
+                suppress=is_redirecting,
+                on_press=keyboard_press_handler_factory(keyboard_press_callback),
+                on_release=keyboard_release_handler_factory(keyboard_release_callback),
+            )
+            keyboard_listener.start()
+            while not toggle_event.wait(0.1):
+                if exit_event.is_set() or main_errno is not None:
+                    break
+            toggle_event.clear()
+            if exit_event.is_set() or main_errno is not None:
+                break
+            before_toggle(is_redirecting)
+            keyboard_listener.stop()
+            keyboard_listener = None
+    except KeyboardInterrupt:
+        exit_event.set()
+    finally:
+        mouse_listener.stop()
+        if keyboard_listener is not None: keyboard_listener.stop()
+        exit_mask()
+        close_edge_portal()
     return main_errno

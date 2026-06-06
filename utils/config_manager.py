@@ -11,6 +11,7 @@ DEFAULT_CONFIG_FILE_NAME = "config.json"
 @dataclass
 class ConfigFile:
     device_ip1: str = ""
+    device_addr1: str = ""
     scan_port: bool = False
     sync_clipboard: bool = True
     share_keyboard_only: bool = False
@@ -21,6 +22,8 @@ class ConfigFile:
     edge_toggling: bool = False
     device_position: str = DevicePosition.RIGHT
     trigger_margin: int = 80
+    overlay_monitor_index: int = 0
+    bind_cursor_to_overlay_monitor: bool = False
     keep_wakeup: bool = False
     language: str = current_language_code() or ENGLISH_LANGUAGE
 
