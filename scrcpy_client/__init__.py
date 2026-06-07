@@ -27,7 +27,113 @@ class ControlMsgType(Enum):
 
 Key = keyboard.Key
 KeyCode = keyboard.KeyCode
-key_scancode_map: dict[Key | KeyCode, SDL_Scancode | HIDKeymod | AKeyCode] = {
+GenericKey = SDL_Scancode | HIDKeymod | AKeyCode
+
+key_scancode_vk_map: dict[int, GenericKey] = {
+    48: SDL_Scancode.SDL_SCANCODE_0,
+    49: SDL_Scancode.SDL_SCANCODE_1,
+    50: SDL_Scancode.SDL_SCANCODE_2,
+    51: SDL_Scancode.SDL_SCANCODE_3,
+    52: SDL_Scancode.SDL_SCANCODE_4,
+    53: SDL_Scancode.SDL_SCANCODE_5,
+    54: SDL_Scancode.SDL_SCANCODE_6,
+    55: SDL_Scancode.SDL_SCANCODE_7,
+    56: SDL_Scancode.SDL_SCANCODE_8,
+    57: SDL_Scancode.SDL_SCANCODE_9,
+
+    65: SDL_Scancode.SDL_SCANCODE_A,
+    66: SDL_Scancode.SDL_SCANCODE_B,
+    67: SDL_Scancode.SDL_SCANCODE_C,
+    68: SDL_Scancode.SDL_SCANCODE_D,
+    69: SDL_Scancode.SDL_SCANCODE_E,
+    70: SDL_Scancode.SDL_SCANCODE_F,
+    71: SDL_Scancode.SDL_SCANCODE_G,
+    72: SDL_Scancode.SDL_SCANCODE_H,
+    73: SDL_Scancode.SDL_SCANCODE_I,
+    74: SDL_Scancode.SDL_SCANCODE_J,
+    75: SDL_Scancode.SDL_SCANCODE_K,
+    76: SDL_Scancode.SDL_SCANCODE_L,
+    77: SDL_Scancode.SDL_SCANCODE_M,
+    78: SDL_Scancode.SDL_SCANCODE_N,
+    79: SDL_Scancode.SDL_SCANCODE_O,
+    80: SDL_Scancode.SDL_SCANCODE_P,
+    81: SDL_Scancode.SDL_SCANCODE_Q,
+    82: SDL_Scancode.SDL_SCANCODE_R,
+    83: SDL_Scancode.SDL_SCANCODE_S,
+    84: SDL_Scancode.SDL_SCANCODE_T,
+    85: SDL_Scancode.SDL_SCANCODE_U,
+    86: SDL_Scancode.SDL_SCANCODE_V,
+    87: SDL_Scancode.SDL_SCANCODE_W,
+    88: SDL_Scancode.SDL_SCANCODE_X,
+    89: SDL_Scancode.SDL_SCANCODE_Y,
+    90: SDL_Scancode.SDL_SCANCODE_Z,
+
+    37: SDL_Scancode.SDL_SCANCODE_LEFT,
+    38: SDL_Scancode.SDL_SCANCODE_UP,
+    39: SDL_Scancode.SDL_SCANCODE_RIGHT,
+    40: SDL_Scancode.SDL_SCANCODE_DOWN,
+
+    8: SDL_Scancode.SDL_SCANCODE_BACKSPACE,
+    9: SDL_Scancode.SDL_SCANCODE_TAB,
+    13: SDL_Scancode.SDL_SCANCODE_RETURN,
+    20: SDL_Scancode.SDL_SCANCODE_CAPSLOCK,
+    27: SDL_Scancode.SDL_SCANCODE_ESCAPE,
+    32: SDL_Scancode.SDL_SCANCODE_SPACE,
+    45: SDL_Scancode.SDL_SCANCODE_INSERT,
+    46: SDL_Scancode.SDL_SCANCODE_DELETE,
+
+    96: SDL_Scancode.SDL_SCANCODE_KP_0,
+    97: SDL_Scancode.SDL_SCANCODE_KP_1,
+    98: SDL_Scancode.SDL_SCANCODE_KP_2,
+    99: SDL_Scancode.SDL_SCANCODE_KP_3,
+    100: SDL_Scancode.SDL_SCANCODE_KP_4,
+    101: SDL_Scancode.SDL_SCANCODE_KP_5,
+    102: SDL_Scancode.SDL_SCANCODE_KP_6,
+    103: SDL_Scancode.SDL_SCANCODE_KP_7,
+    104: SDL_Scancode.SDL_SCANCODE_KP_8,
+    105: SDL_Scancode.SDL_SCANCODE_KP_9,
+    106: SDL_Scancode.SDL_SCANCODE_KP_MULTIPLY,
+    107: SDL_Scancode.SDL_SCANCODE_KP_PLUS,
+    109: SDL_Scancode.SDL_SCANCODE_KP_MINUS,
+    110: SDL_Scancode.SDL_SCANCODE_KP_PERIOD,
+    111: SDL_Scancode.SDL_SCANCODE_KP_DIVIDE,
+    144: SDL_Scancode.SDL_SCANCODE_NUMLOCKCLEAR,
+
+    160: HIDKeymod.HID_MOD_LEFT_SHIFT,
+    161: HIDKeymod.HID_MOD_RIGHT_SHIFT,
+    162: HIDKeymod.HID_MOD_LEFT_CONTROL,
+    163: HIDKeymod.HID_MOD_RIGHT_CONTROL,
+    164: HIDKeymod.HID_MOD_LEFT_ALT,
+    165: HIDKeymod.HID_MOD_ALT_GR,
+
+    112: AKeyCode.AKEYCODE_APP_SWITCH, # F1
+    113: AKeyCode.AKEYCODE_HOME,
+    114: AKeyCode.AKEYCODE_BACK,
+    115: AKeyCode.AKEYCODE_MEDIA_PREVIOUS,
+    116: AKeyCode.AKEYCODE_MEDIA_PLAY_PAUSE, # F5
+    117: AKeyCode.AKEYCODE_MEDIA_NEXT,
+    118: AKeyCode.AKEYCODE_VOLUME_DOWN,
+    119: AKeyCode.AKEYCODE_VOLUME_UP,
+    120: AKeyCode.AKEYCODE_BRIGHTNESS_DOWN,
+    121: AKeyCode.AKEYCODE_BRIGHTNESS_UP, # F10
+    122: AKeyCode.AKEYCODE_SOFT_SLEEP,
+    123: AKeyCode.AKEYCODE_WAKEUP, # F12
+
+    186: SDL_Scancode.SDL_SCANCODE_SEMICOLON,    # VK_OEM_1
+    187: SDL_Scancode.SDL_SCANCODE_EQUALS,       # VK_OEM_PLUS
+    188: SDL_Scancode.SDL_SCANCODE_COMMA,        # VK_OEM_COMMA
+    189: SDL_Scancode.SDL_SCANCODE_MINUS,        # VK_OEM_MINUS
+    190: SDL_Scancode.SDL_SCANCODE_PERIOD,       # VK_OEM_PERIOD
+    191: SDL_Scancode.SDL_SCANCODE_SLASH,        # VK_OEM_2
+    192: SDL_Scancode.SDL_SCANCODE_GRAVE,        # VK_OEM_3
+    219: SDL_Scancode.SDL_SCANCODE_LEFTBRACKET,  # VK_OEM_4
+    220: SDL_Scancode.SDL_SCANCODE_BACKSLASH,    # VK_OEM_5
+    221: SDL_Scancode.SDL_SCANCODE_RIGHTBRACKET, # VK_OEM_6
+    222: SDL_Scancode.SDL_SCANCODE_APOSTROPHE,   # VK_OEM_7
+    226: SDL_Scancode.SDL_SCANCODE_NONUSBACKSLASH,
+}
+
+key_scancode_map: dict[Key | KeyCode, GenericKey] = {
     KeyCode.from_char("0"): SDL_Scancode.SDL_SCANCODE_0,
     KeyCode.from_char("1"): SDL_Scancode.SDL_SCANCODE_1,
     KeyCode.from_char("2"): SDL_Scancode.SDL_SCANCODE_2,
@@ -68,20 +174,51 @@ key_scancode_map: dict[Key | KeyCode, SDL_Scancode | HIDKeymod | AKeyCode] = {
 
     KeyCode.from_char(","): SDL_Scancode.SDL_SCANCODE_COMMA,
     KeyCode.from_char("."): SDL_Scancode.SDL_SCANCODE_PERIOD,
-    KeyCode.from_char("`"): SDL_Scancode.SDL_SCANCODE_GRAVE,
-    KeyCode.from_char("-"): SDL_Scancode.SDL_SCANCODE_MINUS,
+    KeyCode.from_char("`"): SDL_Scancode.SDL_SCANCODE_RIGHTBRACKET,
+    KeyCode.from_char("´"): SDL_Scancode.SDL_SCANCODE_RIGHTBRACKET,
+    KeyCode.from_char("ˋ"): SDL_Scancode.SDL_SCANCODE_RIGHTBRACKET,
+    KeyCode.from_char("~"): SDL_Scancode.SDL_SCANCODE_BACKSLASH,
+    KeyCode.from_char("^"): SDL_Scancode.SDL_SCANCODE_BACKSLASH,
+    KeyCode.from_char("-"): SDL_Scancode.SDL_SCANCODE_SLASH,
+    KeyCode.from_char("_"): SDL_Scancode.SDL_SCANCODE_SLASH,
     KeyCode.from_char("="): SDL_Scancode.SDL_SCANCODE_EQUALS,
+    KeyCode.from_char("«"): SDL_Scancode.SDL_SCANCODE_EQUALS,
+    KeyCode.from_char("»"): SDL_Scancode.SDL_SCANCODE_EQUALS,
     KeyCode.from_char("["): SDL_Scancode.SDL_SCANCODE_LEFTBRACKET,
     KeyCode.from_char("]"): SDL_Scancode.SDL_SCANCODE_RIGHTBRACKET,
     KeyCode.from_char("\\"): SDL_Scancode.SDL_SCANCODE_BACKSLASH,
     KeyCode.from_char(";"): SDL_Scancode.SDL_SCANCODE_SEMICOLON,
-    KeyCode.from_char("'"): SDL_Scancode.SDL_SCANCODE_APOSTROPHE,
+    KeyCode.from_char("ç"): SDL_Scancode.SDL_SCANCODE_SEMICOLON,
+    KeyCode.from_char("Ç"): SDL_Scancode.SDL_SCANCODE_SEMICOLON,
+    KeyCode.from_char("'"): SDL_Scancode.SDL_SCANCODE_MINUS,
     KeyCode.from_char("/"): SDL_Scancode.SDL_SCANCODE_SLASH,
+    KeyCode.from_char("?"): SDL_Scancode.SDL_SCANCODE_MINUS,
+    KeyCode.from_char("+"): SDL_Scancode.SDL_SCANCODE_LEFTBRACKET,
+    KeyCode.from_char("*"): SDL_Scancode.SDL_SCANCODE_LEFTBRACKET,
+    KeyCode.from_char("º"): SDL_Scancode.SDL_SCANCODE_APOSTROPHE,
+    KeyCode.from_char("ª"): SDL_Scancode.SDL_SCANCODE_APOSTROPHE,
+
+    Key.backspace: SDL_Scancode.SDL_SCANCODE_BACKSPACE,
+    Key.tab:       SDL_Scancode.SDL_SCANCODE_TAB,
+    Key.enter:     SDL_Scancode.SDL_SCANCODE_RETURN,
+    Key.esc:       SDL_Scancode.SDL_SCANCODE_ESCAPE,
+    Key.space:     SDL_Scancode.SDL_SCANCODE_SPACE,
+    Key.caps_lock: SDL_Scancode.SDL_SCANCODE_CAPSLOCK,
+    Key.insert:    SDL_Scancode.SDL_SCANCODE_INSERT,
+    Key.delete:    SDL_Scancode.SDL_SCANCODE_DELETE,
+    Key.home:      SDL_Scancode.SDL_SCANCODE_HOME,
+    Key.end:       SDL_Scancode.SDL_SCANCODE_END,
+    Key.page_up:   SDL_Scancode.SDL_SCANCODE_PAGEUP,
+    Key.page_down: SDL_Scancode.SDL_SCANCODE_PAGEDOWN,
+    Key.left:      SDL_Scancode.SDL_SCANCODE_LEFT,
+    Key.up:        SDL_Scancode.SDL_SCANCODE_UP,
+    Key.right:     SDL_Scancode.SDL_SCANCODE_RIGHT,
+    Key.down:      SDL_Scancode.SDL_SCANCODE_DOWN,
 
     Key.alt:     HIDKeymod.HID_MOD_ALT,
     Key.alt_l:   HIDKeymod.HID_MOD_LEFT_ALT,
-    Key.alt_r:   HIDKeymod.HID_MOD_RIGHT_ALT,
-    Key.alt_gr:  HIDKeymod.HID_MOD_RIGHT_ALT,
+    Key.alt_r:   HIDKeymod.HID_MOD_ALT_GR,
+    Key.alt_gr:  HIDKeymod.HID_MOD_ALT_GR,
     Key.ctrl:    HIDKeymod.HID_MOD_CONTROL,
     Key.ctrl_l:  HIDKeymod.HID_MOD_LEFT_CONTROL,
     Key.ctrl_r:  HIDKeymod.HID_MOD_RIGHT_CONTROL,
@@ -119,3 +256,14 @@ key_scancode_map: dict[Key | KeyCode, SDL_Scancode | HIDKeymod | AKeyCode] = {
     KeyCode.from_vk(122): AKeyCode.AKEYCODE_SOFT_SLEEP,
     KeyCode.from_vk(123): AKeyCode.AKEYCODE_WAKEUP, # F12
 }
+
+def get_generic_key(k: Key | KeyCode) -> GenericKey | None:
+    if isinstance(k, KeyCode):
+        if k.char is not None and not k.char.isalnum():
+            generic_key = key_scancode_map.get(KeyCode.from_char(k.char))
+            if generic_key is not None:
+                return generic_key
+        generic_key = key_scancode_vk_map.get(k.vk)
+        if generic_key is not None:
+            return generic_key
+    return key_scancode_map.get(k)

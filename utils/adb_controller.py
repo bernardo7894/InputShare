@@ -165,3 +165,31 @@ def stop_keep_awake_helper():
     if process.returncode != 0:
         _run_adb_for_device(device, ["shell", "am", "force-stop", KEEP_AWAKE_PACKAGE_NAME])
     LOGGER.write(LogType.Adb, "InputShare keep-awake helper stopped.")
+
+def request_send_message() -> bool:
+    device = get_adb_device()
+    if isinstance(device, Exception): return False
+    try:
+        subprocess.Popen(
+            [
+                ADB_BIN_PATH,
+                "-P",
+                str(ADB_SERVER_PORT),
+                "-s",
+                device.serial,
+                "shell",
+                "am",
+                "startservice",
+                "-n",
+                KEEP_AWAKE_SERVICE_NAME,
+                "--ez",
+                "send_message",
+                "true",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return True
+    except Exception as e:
+        LOGGER.write(LogType.Error, "Request send message failed: " + str(e))
+        return False

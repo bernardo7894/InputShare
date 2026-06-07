@@ -7,8 +7,9 @@ import queue
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 from pynput import mouse, keyboard
-from scrcpy_client import key_scancode_map
+from scrcpy_client import get_generic_key
 from scrcpy_client.android_def import AKeyCode, AKeyEventAction
+from scrcpy_client.clipboard_event import SetClipboardEvent
 from scrcpy_client.hid_def import HID_KEYBOARD_MAX_KEYS, HID_MouseButton, HIDKeymod, KeymodStateStore, MouseButtonStateStore
 from scrcpy_client.hid_event import HIDKeyboardInitEvent, KeyEmptyEvent, KeyEvent, MouseClickEvent, MouseMoveEvent, MouseScrollEvent, HIDMouseInitEvent
 from scrcpy_client.inject_event import InjectKeyCode
@@ -92,19 +93,64 @@ def callback_context_wrapper(
     keymod_state = KeymodStateStore()
     key_list: list[SDL_Scancode] = []
     manual_device_sleep = False
+    altgr_down = False
+
+    def _altgr_text(k: keyboard.Key | keyboard.KeyCode) -> str | None:
+        if not isinstance(k, keyboard.KeyCode):
+            return None
+        match k.vk:
+            case 50: return "@"
+            case 51: return "£"
+            case 52: return "§"
+            case 69: return "€"
+        if k.char is not None and len(k.char) > 0 and k.char.isprintable():
+            return k.char
+        return None
+
+    def _paste_text(text: str) -> CallbackResult:
+        paste_mod = KeymodStateStore()
+        paste_mod.keydown(HIDKeymod.HID_MOD_CONTROL)
+        for data in [
+            SetClipboardEvent(text).serialize(),
+            KeyEvent(paste_mod, [SDL_Scancode.SDL_SCANCODE_V]).serialize(),
+            KeyEmptyEvent().serialize(),
+        ]:
+            if (res := send_data(data)) is not None:
+                return res
+        return None
 
     def keyboard_press_callback(k: keyboard.Key | keyboard.KeyCode, is_redirecting: bool):
-        if k not in key_scancode_map: return None
-        generic_key = key_scancode_map[k]
+        nonlocal altgr_down
+        if is_redirecting and altgr_down:
+            text = _altgr_text(k)
+            if text is not None:
+                if (res := _paste_text(text)) is not None:
+                    schedule_exit(res)
+                return None
+
+        generic_key = get_generic_key(k)
+        if generic_key is None: return None
         shortcut_data = _customized_shortcuts(generic_key, keymod_state, is_redirecting)
         if shortcut_data is not None:
             for data in shortcut_data:
                 send_data_async(data); return
 
+        if generic_key == HIDKeymod.HID_MOD_ALT_GR:
+            altgr_down = True
+            if keymod_state.has_key(HIDKeymod.HID_MOD_LEFT_CONTROL):
+                keymod_state.keyup(HIDKeymod.HID_MOD_LEFT_CONTROL)
+                if is_redirecting:
+                    send_data_async(KeyEvent(keymod_state, key_list).serialize())
+            return None
+
         if type(generic_key) == HIDKeymod:
             keymod_state.keydown(generic_key)
 
         if not is_redirecting: return None
+        if generic_key == SDL_Scancode.SDL_SCANCODE_RETURN and not keymod_state.has_key(HIDKeymod.HID_MOD_SHIFT):
+            from utils.adb_controller import request_send_message
+            request_send_message()
+            return None
         if type(generic_key) == AKeyCode:
             nonlocal manual_device_sleep
             if generic_key == AKeyCode.AKEYCODE_SOFT_SLEEP: manual_device_sleep = True
@@ -120,12 +166,22 @@ def callback_context_wrapper(
         send_data_async(key_event.serialize()); return
 
     def keyboard_release_callback(k: keyboard.Key | keyboard.KeyCode, is_redirecting: bool):
-        if k not in key_scancode_map: return None
-        generic_key = key_scancode_map[k]
+        nonlocal altgr_down
+        if altgr_down and _altgr_text(k) is not None:
+            return None
+
+        generic_key = get_generic_key(k)
+        if generic_key is None: return None
+        if generic_key == HIDKeymod.HID_MOD_ALT_GR:
+            altgr_down = False
+            return None
+
         if type(generic_key) == HIDKeymod:
             keymod_state.keyup(generic_key)
 
         if not is_redirecting: return None
+        if generic_key == SDL_Scancode.SDL_SCANCODE_RETURN and not keymod_state.has_key(HIDKeymod.HID_MOD_SHIFT):
+            return None
         if type(generic_key) == AKeyCode:
             inject_key_code = InjectKeyCode(generic_key, AKeyEventAction.AKEY_EVENT_ACTION_UP)
             send_data_async(inject_key_code.serialize()); return
@@ -157,7 +213,6 @@ def callback_context_wrapper(
                 last_wakeup_time = current_time
                 if (res := send_data(KeyEmptyEvent().serialize())) is not None:
                     schedule_exit(res); break
-                LOGGER.write(LogType.Adb, "Android keep-awake HID pulse sent.")
 
             try:# adapt different polling rates.
                 # when mouse moves, the loop frequency equals polling rate;

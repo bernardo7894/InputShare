@@ -16,6 +16,7 @@ import android.view.WindowManager;
 public class KeepAwakeService extends Service {
     private static final String CHANNEL_ID = "inputshare_keep_awake";
     private static final int NOTIFICATION_ID = 1;
+    public static final String EXTRA_SEND_MESSAGE = "send_message";
 
     private WindowManager windowManager;
     private View keepAwakeView;
@@ -31,6 +32,11 @@ public class KeepAwakeService extends Service {
         boolean stop = intent != null && intent.getBooleanExtra("stop", false);
         if (stop) {
             stopSelf();
+            return START_NOT_STICKY;
+        }
+        boolean sendMessage = intent != null && intent.getBooleanExtra(EXTRA_SEND_MESSAGE, false);
+        if (sendMessage) {
+            SendActionAccessibilityService.requestSend();
             return START_NOT_STICKY;
         }
 

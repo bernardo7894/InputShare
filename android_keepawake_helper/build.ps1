@@ -34,9 +34,10 @@ Invoke-Checked (Join-Path $BuildToolsDir "aapt2.exe") link `
     -o $UnsignedApk `
     (Join-Path $OutDir "res.zip")
 
-Invoke-Checked "javac" -source 1.8 -target 1.8 -bootclasspath $PlatformJar -d $ClassesDir `
-    (Join-Path $ProjectDir "src\com\inputshare\keepawake\KeepAwakeService.java")
-Invoke-Checked (Join-Path $BuildToolsDir "d8.bat") --lib $PlatformJar --output $DexDir (Join-Path $ClassesDir "com\inputshare\keepawake\KeepAwakeService.class")
+$JavaSources = Get-ChildItem -Path (Join-Path $ProjectDir "src") -Filter "*.java" -Recurse | ForEach-Object { $_.FullName }
+Invoke-Checked "javac" -source 1.8 -target 1.8 -bootclasspath $PlatformJar -d $ClassesDir @JavaSources
+$ClassFiles = Get-ChildItem -Path $ClassesDir -Filter "*.class" -Recurse | ForEach-Object { $_.FullName }
+Invoke-Checked (Join-Path $BuildToolsDir "d8.bat") --lib $PlatformJar --output $DexDir @ClassFiles
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $apkZip = [System.IO.Compression.ZipFile]::Open($UnsignedApk, "Update")

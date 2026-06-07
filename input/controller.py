@@ -55,7 +55,7 @@ def keyboard_press_handler_factory(callback: KeyEventCallback):
         canonical_k = keyboard_listener.canonical(k)
         switch_hotkey.press(canonical_k)
         exit_hotkey.press(canonical_k)
-        callback(canonical_k, is_redirecting)
+        callback(k, is_redirecting)
     return keyboard_press_handler
 
 def keyboard_release_handler_factory(callback: KeyEventCallback):
@@ -67,7 +67,7 @@ def keyboard_release_handler_factory(callback: KeyEventCallback):
         canonical_k = keyboard_listener.canonical(k)
         switch_hotkey.release(canonical_k)
         exit_hotkey.release(canonical_k)
-        callback(canonical_k, is_redirecting)
+        callback(k, is_redirecting)
     return keyboard_release_handler
 
 def mouse_move_handler_factory(callback: MouseMoveCallback):
